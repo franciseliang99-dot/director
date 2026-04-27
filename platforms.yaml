@@ -1,0 +1,39 @@
+# director 平台预设
+# 每个 platform id 决定:script-gen 传哪个 --platform、video-gen 用哪个 --aspect、picture-gen 出图分辨率
+
+tiktok:
+  aspect: "9:16"
+  width: 1080
+  height: 1920
+  duration_default_s: 30
+  duration_max_s: 60
+  script_gen_platform: tiktok
+  fps: 30
+
+douyin:
+  aspect: "9:16"
+  width: 1080
+  height: 1920
+  duration_default_s: 30
+  duration_max_s: 60
+  script_gen_platform: douyin
+  fps: 30
+
+yt_short:
+  aspect: "9:16"
+  width: 1080
+  height: 1920
+  duration_default_s: 30
+  duration_max_s: 60
+  script_gen_platform: reels  # 临时映射,无原生 youtube 支持
+  fps: 30
+
+yt_landscape:
+  aspect: "16:9"
+  width: 1920
+  height: 1080
+  duration_default_s: 60
+  duration_max_s: 600
+  script_gen_platform: reels  # 已知短板,等 script-gen 加 youtube
+  fps: 30
+  notes: "script-gen 暂无 youtube 长视频风格,产出仍是短竖屏节奏;后期裁切可能不理想"

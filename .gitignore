@@ -1,0 +1,19 @@
+# 产出物,不入仓
+projects/
+*.mp4
+*.mp3
+*.jpg
+*.jpeg
+*.png
+*.webp
+
+# 日志 / 临时
+*.log
+.DS_Store
+__pycache__/
+*.pyc
+
+# 私密
+.env
+.env.*
+!.env.example

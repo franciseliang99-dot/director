@@ -1,0 +1,96 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "director project manifest",
+  "type": "object",
+  "required": ["project_id", "topic", "language", "platforms", "created_at", "tool_versions", "steps"],
+  "properties": {
+    "project_id":   {"type": "string", "pattern": "^[0-9]{8}-[a-z0-9-]+$"},
+    "topic":        {"type": "string"},
+    "language":     {"type": "string", "examples": ["zh-CN", "en-US"]},
+    "style":        {"type": "string", "examples": ["vlog-warm", "news", "story", "explain"]},
+    "platforms": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["id", "aspect", "duration_target_s"],
+        "properties": {
+          "id":                 {"type": "string", "examples": ["tiktok", "yt_short", "yt_landscape"]},
+          "aspect":             {"enum": ["9:16", "16:9"]},
+          "duration_target_s":  {"type": "integer", "minimum": 5}
+        }
+      }
+    },
+    "created_at":     {"type": "string", "format": "date-time"},
+    "completed_at":   {"type": ["string", "null"], "format": "date-time"},
+    "tool_versions":  {"type": "object", "additionalProperties": {"type": "string"}},
+    "steps": {
+      "type": "object",
+      "required": ["script", "images", "audio", "bgm", "video"],
+      "properties": {
+        "script": {"$ref": "#/$defs/stepBase",
+          "properties": {"session_id": {"type": "string"}, "artifact": {"type": "string"}}},
+        "images": {"$ref": "#/$defs/stepWithScenes"},
+        "audio":  {"$ref": "#/$defs/stepWithScenes"},
+        "bgm":    {"$ref": "#/$defs/stepBase"},
+        "video":  {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/$defs/stepBase",
+            "properties": {"artifact": {"type": "string"}, "plan": {"type": "string"}}
+          }
+        }
+      }
+    },
+    "errors": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["step", "ts", "msg"],
+        "properties": {
+          "step":      {"type": "string"},
+          "scene_idx": {"type": ["integer", "null"]},
+          "ts":        {"type": "string", "format": "date-time"},
+          "msg":       {"type": "string"},
+          "recovered": {"type": "boolean"}
+        }
+      }
+    }
+  },
+  "$defs": {
+    "stepBase": {
+      "type": "object",
+      "required": ["status"],
+      "properties": {
+        "status":      {"enum": ["pending", "running", "done", "failed", "skipped"]},
+        "started_at":  {"type": ["string", "null"], "format": "date-time"},
+        "ended_at":    {"type": ["string", "null"], "format": "date-time"},
+        "attempts":    {"type": "integer", "minimum": 0},
+        "reason":      {"type": "string"}
+      }
+    },
+    "stepWithScenes": {
+      "allOf": [{"$ref": "#/$defs/stepBase"}],
+      "properties": {
+        "scenes": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["idx", "status"],
+            "properties": {
+              "idx":         {"type": "integer", "minimum": 1},
+              "status":      {"enum": ["pending", "running", "done", "failed", "skipped"]},
+              "prompt":      {"type": "string"},
+              "text":        {"type": "string"},
+              "artifact":    {"type": "string"},
+              "voice":       {"type": "string"},
+              "duration_s":  {"type": "number"},
+              "seed":        {"type": "integer"},
+              "model":       {"type": "string"}
+            }
+          }
+        }
+      }
+    }
+  }
+}

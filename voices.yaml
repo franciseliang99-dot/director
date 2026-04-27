@@ -1,0 +1,25 @@
+# director TTS voice 短名表(edge-tts)
+# style 维度:warm / energetic / calm / news
+# director 按 language + style 选 voice;用户可在 manifest 显式覆盖
+
+zh-CN:
+  warm:       zh-CN-XiaoxiaoNeural    # 女,温柔通用
+  energetic:  zh-CN-YunxiNeural       # 男,活力少年
+  calm:       zh-CN-XiaoyiNeural      # 女,平稳叙事
+  news:       zh-CN-YunjianNeural     # 男,新闻播报
+
+zh-HK:
+  warm:       zh-HK-HiuGaaiNeural
+  energetic:  zh-HK-WanLungNeural
+
+en-US:
+  warm:       en-US-JennyNeural
+  energetic:  en-US-GuyNeural
+  calm:       en-US-AriaNeural
+  news:      en-US-EricNeural
+
+en-GB:
+  warm:       en-GB-SoniaNeural
+  energetic:  en-GB-RyanNeural
+
+# 完整列表:`/home/myclaw/audio-gen/.venv/bin/python3 /home/myclaw/audio-gen/generate.py --list-voices`
