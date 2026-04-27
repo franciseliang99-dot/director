@@ -1,5 +1,17 @@
 # director CHANGELOG
 
+## V0.2.1 — 2026-04-27
+
+首支视频实跑后的 SOP 修正(项目:`20260427-earwax-removal`,60s 英文 explain TikTok)。
+
+实测教训:
+- **Pollinations 实际单并发**:首次 4 并发触发 HTTP 429,触发后 IP 进入 ~3min cooldown,期间任何并发都拒。pipeline.md `max_parallel=4` 不适用 picture-gen,改为 picture-gen 全程**串行**;audio-gen / bgm-gen 不受影响。
+- **picture-gen exit code bug**:网络 429 时 exit code 仍是 0,只能看 stderr / 产物文件检测失败。降级矩阵补这条。
+- **amix `duration=first` 错误**:V0.2.0 step 5 用 `duration=first`,当 narration 短于 video 时(本支 narration 41.57s vs video 43.90s)会截掉视频末段。修正为 `duration=longest` + `-shortest` 让 video 决定最终长度。同步 audio bitrate 显式 `-b:a 192k`(默认 128k 偏低)。
+
+变更:
+- `pipeline.md` Step 2 节流规则改写(picture 串行 / audio 4 并发 / bgm 单跑);Step 5 ffmpeg 命令修 `duration=longest`;降级矩阵补 picture-gen exit-0-but-failed 行。
+
 ## V0.2.0 — 2026-04-27
 
 接入 bgm-gen (V1.0.1,本地 MIDI+fluidsynth)。BGM 从"占位 skip"升级为完整流水线步骤,失败自动降级 skip 不阻塞出片。

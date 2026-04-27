@@ -40,7 +40,11 @@ python3 /home/myclaw/picture-gen/main.py "<image_prompt>" --width <W> --height <
 /home/myclaw/bgm-gen/.venv/bin/python3 /home/myclaw/bgm-gen/generate.py "<topic>" -d <total_s+2> [-m <mood>] -o projects/<id>/bgm/track.wav
 ```
 
-**节流**:N>4 时分批,每批最多 4 个并行 Bash;BGM 单独一批(它内部 fluidsynth 是 CPU 密集,跟 IO 密集的 picture/audio 错峰即可)。
+**节流(实测修正,2026-04-27 V0.2.1)**:
+- **picture-gen 实际只能 1 并发**(Pollinations 同 IP 严格限流;首次 4 并发会 429,且触发 ~3min IP cooldown 期间任何并发都拒)。
+- **audio-gen 安全 4 并发**(edge-tts 不同 endpoint,无冲突)。
+- **bgm-gen 单跑**(fluidsynth CPU 密集)。
+- 推荐节奏:audio 1-9 分 3 批 (4+4+1) 一气呵成,BGM 同期或紧接,picture 全程串行(每张 ~1-3min);picture 串行链可放后台单 Bash 运行,与 audio/bgm 错峰。
 
 **重命名**:picture-gen 写到 `images/.raw/<ts>-<slug>.jpg`,主 Claude 跑完后立刻用 `mv` 重命名为 `images/scene_NN.jpg` 并删 `.raw/`。manifest `steps.images.scenes[i].artifact` 写**重命名后**的路径。
 
@@ -77,9 +81,11 @@ ffmpeg -f concat -safe 0 -i <(printf "file '%s'\n" audio/scene_*.mp3) -c copy au
 ffmpeg -i renders/<platform>.mp4 \
        -i audio/narration.mp3 \
        -i bgm/track.wav \
-       -filter_complex "[1:a]volume=1.0[a1];[2:a]volume=0.25,afade=t=out:st=<total_s-1.5>:d=1.5[a2];[a1][a2]amix=inputs=2:duration=first:dropout_transition=0[aout]" \
-       -map 0:v -map "[aout]" -c:v copy -c:a aac -shortest renders/<platform>_av.mp4
+       -filter_complex "[1:a]volume=1.0[a1];[2:a]volume=0.25,afade=t=out:st=<video_total_s-1.5>:d=1.5[a2];[a1][a2]amix=inputs=2:duration=longest:dropout_transition=0[aout]" \
+       -map 0:v -map "[aout]" -c:v copy -c:a aac -b:a 192k -shortest renders/<platform>_av.mp4
 ```
+
+**关键**:`amix duration=longest`(不是 first)+ `-shortest` 让最终长度由 video 决定。若用 `first`(narration),narration 短于 video 时视频末段会被截掉。
 
 **无 BGM** (`steps.bgm.status=skipped/failed`):仅 narration
 
@@ -94,7 +100,7 @@ manifest `steps.video.<platform>.artifact` 改为 `_av.mp4`。所有关键 step 
 | 故障 | 处置 |
 |---|---|
 | script-gen Anthropic 超额 | 切 `--model claude-haiku-4-5-20251001`;或停下让用户手填 `script/script.json` 直接进 step 2 |
-| picture-gen pollinations 503/limit | 指数退避(1s/3s/9s),3 次失败 → 整体停,manifest `steps.images.partial=true` |
+| picture-gen pollinations 503/429 | **重试必须串行**(IP cooldown);picture-gen exit code 0 即使 429,要看 stderr / 产物文件;3 次失败 → 整体停,manifest `steps.images.partial=true` |
 | audio-gen edge-tts 文本太长 | 按句号切多段调用,合并 mp3(文本 > 5000 字时主动拆分) |
 | audio-gen voice 不存在 | 退回默认 `zh-CN-XiaoxiaoNeural` 或 `en-US-JennyNeural` |
 | bgm-gen fluidsynth/SoundFont 缺 / mood 不存在 | manifest `steps.bgm.status=failed` → **自动降级 skipped**,step 5 走"无 BGM"分支 |
