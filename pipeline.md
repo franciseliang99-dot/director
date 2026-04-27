@@ -24,9 +24,9 @@ uv run python -m cli.main show "$session_id" > projects/<id>/script/script.json
 - 解析 `script.json` 的 `scenes[]`(假设 schema 含 `idx / narration / image_prompt`),决定 N。
 - 解析失败 → manifest `steps.script.status=failed`,停下问用户(可能是 script-gen schema 漂移)。
 
-## Step 2 — 并行出 N 张图 + N 段音频
+## Step 2 — 并行出 N 张图 + N 段音频 + 1 条 BGM
 
-主 Claude 在**一条消息里发 2N 个 Bash 调用**(harness 自动并行,但手动节流到 `max_parallel=4`,避免 pollinations 限流):
+主 Claude 在**一条消息里发 2N+1 个 Bash 调用**(harness 自动并行,但手动节流到 `max_parallel=4`,避免 pollinations 限流):
 
 ```bash
 # 每个 scene 一张图(尺寸按平台 aspect 取,见 platforms.yaml)
@@ -34,17 +34,21 @@ python3 /home/myclaw/picture-gen/main.py "<image_prompt>" --width <W> --height <
 
 # 每个 scene 一段音频(voice 按 language+style 取,见 voices.yaml)
 /home/myclaw/audio-gen/.venv/bin/python3 /home/myclaw/audio-gen/generate.py "<narration>" -v <voice> -o projects/<id>/audio/scene_NN.mp3
+
+# 整段 1 条 BGM(时长 = max(platforms.duration_target_s) + 2s 给 fade-out 余量)
+# style→mood 映射见 CLAUDE.md;style 未指定时不传 -m,让 bgm-gen 自己从 topic 推断
+/home/myclaw/bgm-gen/.venv/bin/python3 /home/myclaw/bgm-gen/generate.py "<topic>" -d <total_s+2> [-m <mood>] -o projects/<id>/bgm/track.wav
 ```
 
-`bgm-gen` 此处跳过(标 skipped)。
-
-**节流**:N>4 时分批,每批最多 4 个并行 Bash。
+**节流**:N>4 时分批,每批最多 4 个并行 Bash;BGM 单独一批(它内部 fluidsynth 是 CPU 密集,跟 IO 密集的 picture/audio 错峰即可)。
 
 **重命名**:picture-gen 写到 `images/.raw/<ts>-<slug>.jpg`,主 Claude 跑完后立刻用 `mv` 重命名为 `images/scene_NN.jpg` 并删 `.raw/`。manifest `steps.images.scenes[i].artifact` 写**重命名后**的路径。
 
 ## Step 3 — 资产规范化检查
 
 校验 `images/scene_01.jpg ... scene_NN.jpg` 全部存在、`audio/scene_01.mp3 ... scene_NN.mp3` 全部存在,文件大小 > 0。任何缺失 → manifest 标对应 scene `status=failed`,停下问用户。
+
+`bgm/track.wav` 缺失或大小 0 → manifest `steps.bgm.status=failed`,**自动降级为 skipped,不阻塞**(无 BGM 仍出片,step 5 跳过 bgm 混音)。
 
 ## Step 4 — video-gen(M 平台并行)
 
@@ -59,17 +63,31 @@ video-gen 内部 5 步(plan / render / ffprobe / 自评)由 skill 自管,主 Cla
 
 ## Step 5 — 后期合音 + manifest 收尾
 
-```
-ffmpeg -i renders/<platform>.mp4 -i <merged_narration.mp3> -c:v copy -c:a aac -shortest renders/<platform>_av.mp4
-```
-
 合并多段 narration 为一条:
 
 ```
 ffmpeg -f concat -safe 0 -i <(printf "file '%s'\n" audio/scene_*.mp3) -c copy audio/narration.mp3
 ```
 
-manifest `steps.video.<platform>.artifact` 改为 `_av.mp4`。所有 steps `status=done` 后,manifest `created_at` 不动,新增 `completed_at`。
+合入视频:
+
+**有 BGM** (`steps.bgm.status=done`):narration 主轨 + BGM 衰减到 25% 副轨混音
+
+```
+ffmpeg -i renders/<platform>.mp4 \
+       -i audio/narration.mp3 \
+       -i bgm/track.wav \
+       -filter_complex "[1:a]volume=1.0[a1];[2:a]volume=0.25,afade=t=out:st=<total_s-1.5>:d=1.5[a2];[a1][a2]amix=inputs=2:duration=first:dropout_transition=0[aout]" \
+       -map 0:v -map "[aout]" -c:v copy -c:a aac -shortest renders/<platform>_av.mp4
+```
+
+**无 BGM** (`steps.bgm.status=skipped/failed`):仅 narration
+
+```
+ffmpeg -i renders/<platform>.mp4 -i audio/narration.mp3 -c:v copy -c:a aac -shortest renders/<platform>_av.mp4
+```
+
+manifest `steps.video.<platform>.artifact` 改为 `_av.mp4`。所有关键 step (`status in {done, skipped}`) 后,manifest 新增 `completed_at`。
 
 ## 降级矩阵
 
@@ -79,6 +97,7 @@ manifest `steps.video.<platform>.artifact` 改为 `_av.mp4`。所有 steps `stat
 | picture-gen pollinations 503/limit | 指数退避(1s/3s/9s),3 次失败 → 整体停,manifest `steps.images.partial=true` |
 | audio-gen edge-tts 文本太长 | 按句号切多段调用,合并 mp3(文本 > 5000 字时主动拆分) |
 | audio-gen voice 不存在 | 退回默认 `zh-CN-XiaoxiaoNeural` 或 `en-US-JennyNeural` |
+| bgm-gen fluidsynth/SoundFont 缺 / mood 不存在 | manifest `steps.bgm.status=failed` → **自动降级 skipped**,step 5 走"无 BGM"分支 |
 | video-gen ffprobe 验证失败 | 不自动重跑,manifest `steps.video.<p>.status=failed`,停下问用户 |
 | 某 scene 死活出不来 | **默认 stop-the-world**(质量优先);用户可显式说"跳过 scene N 用 N-1 张" |
 

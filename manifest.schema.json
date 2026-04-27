@@ -32,7 +32,15 @@
           "properties": {"session_id": {"type": "string"}, "artifact": {"type": "string"}}},
         "images": {"$ref": "#/$defs/stepWithScenes"},
         "audio":  {"$ref": "#/$defs/stepWithScenes"},
-        "bgm":    {"$ref": "#/$defs/stepBase"},
+        "bgm": {
+          "allOf": [{"$ref": "#/$defs/stepBase"}],
+          "properties": {
+            "mood":       {"enum": ["calm", "tense", "sad", "happy", "epic", "mystery", "funny", "cozy"]},
+            "artifact":   {"type": "string"},
+            "duration_s": {"type": "number", "minimum": 1},
+            "seed":       {"type": "integer"}
+          }
+        },
         "video":  {
           "type": "object",
           "additionalProperties": {

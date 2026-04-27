@@ -16,7 +16,7 @@
 | script-gen | `cd /home/myclaw/script-gen && uv run python -m cli.main new "<desc>" --platform <tiktok\|douyin\|reels> --duration <N>` → session id 从 stderr `[script-gen] session id: <id>` 抓取 → `uv run python -m cli.main show <id>` 拿 JSON 到 stdout |
 | picture-gen | `python3 /home/myclaw/picture-gen/main.py "<prompt>" --width <W> --height <H> --no-expand --out <abs_dir>` (产物 `<dir>/<ts>-<slug>.jpg`,**director 必须重命名为 `scene_NN.jpg`**) |
 | audio-gen | `/home/myclaw/audio-gen/.venv/bin/python3 /home/myclaw/audio-gen/generate.py "<text>" -v <voice> -o <abs.mp3>` |
-| bgm-gen | **未实装**,`steps.bgm.status = "skipped"`,reason 写 "tool not implemented" |
+| bgm-gen | `/home/myclaw/bgm-gen/.venv/bin/python3 /home/myclaw/bgm-gen/generate.py "<topic 或 mood 描述>" -d <total_s+2> [-m <mood>] [--seed N] -o <abs.wav>` (本地 MIDI+fluidsynth,产物 .wav) |
 | video-gen | `Skill('video-gen', "<title prompt> --images abs1.jpg,abs2.jpg,... --aspect <16:9\|9:16> --out <abs.mp4>")` |
 
 **绝对路径强制**:子工具 cwd 各自不同,所有 `--out` / `--images` 一律写绝对路径,不留歧义。
@@ -36,11 +36,26 @@
 
 `yt_landscape` 是已知短板:用 `reels` 当代偿,产出脚本风格偏短竖屏,合到 16:9 时画面会有上下黑边或裁切。等 script-gen 加 `youtube` 选项后改回。
 
+## bgm-gen mood 映射
+
+bgm-gen 的 `--mood` 是 8 选 1:`calm / tense / sad / happy / epic / mystery / funny / cozy`。director 按 manifest 的 `style` 字段映射(用户未指定 `style` 时,**让 bgm-gen 自己从 topic 关键词推断,不传 `-m`**):
+
+| director style | bgm-gen mood |
+|---|---|
+| `vlog-warm` | `cozy` |
+| `news` | `calm` |
+| `story` | `epic` |
+| `explain` | `calm` |
+| `comedy` | `funny` |
+| `thriller` | `tense` |
+
+时长:`-d` 传**视频总时长 + 2s**(给末尾 fade-out 余量,ffmpeg 在 step 5 截到视频总长)。
+
 ## 失败/重试纪律
 
 - 每个步骤(每个 scene)**最多 2 次自动重试**,第 3 次失败必须停下问用户(护 API 额度)。
 - 不用 `sleep` 轮询、不用 `|| true` 吞错、不用 `--no-verify`;失败先看 manifest `errors[]` + `logs/<step>-<ts>.log` 定位根因。
-- `bgm-gen` 未装是常态,永远 `skipped`,不阻塞 video。
+- `bgm-gen` 失败(fluidsynth 缺 / SoundFont 缺 / mood 不存在)→ manifest `steps.bgm.status=failed`,**降级为 skipped 继续出片**(BGM 是非关键路径,无 BGM 不影响视频可看)。
 
 ## 不在仓内提交产出物
 
