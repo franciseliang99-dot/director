@@ -44,6 +44,8 @@ director 不只是"orchestrator",也是 5 agent + 自身的 **maintainer**。改
 3. Edit-Read miss — Edit 失败要立刻 Read+重 Edit,git commit 前 `git diff --cached --stat` 验文件清单
 4. Pollinations 单并发 — picture-gen 全程串行,不信公开文档限流数字
 5. Optional agent 设计 — 标 `extra.optional=true` 前必须真有 fallback 路径,fallback 质量不显著低于本 agent
+6. SKILL.md 文档边界值 ≠ 实测安全上限 — 用 range 上下限前必须 smoke 验证(default 一般可信)
+7. Subagent 复杂行为推理实施前必须 single-step smoke verify — ffmpeg/filter/外部 API 类 fix 推荐尤其
 
 ## 健康自检(V0.3.0+)
 

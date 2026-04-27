@@ -100,6 +100,31 @@ director 在 V0.3.0+ 不只是"orchestrator"(串视频),还是 5 个 agent (`scr
 
 **规则**:每次 Edit 失败(`InputValidationError: file not read`),**立刻 Read + 重 Edit + 进同一 commit**;不要假设 Edit 静默成功。git commit 前必看 `git diff --cached --stat` 确认文件清单符合预期。
 
+### 6.7 Subagent 复杂行为推理实施前必须 single-step smoke verify(V0.4.2 起)
+
+**反例**:video-gen V0.3.1 修 tail_hold_s deadlock 时,Plan subagent 给的 root cause 诊断**正确**(ffmpeg framequeue 在 tpad clone stage overflow),但推荐的 fix 方案 A(`-loop 1 -t` per png input,声称 zoompan `d=` 会 hard-cap output frame count)与 zoompan 实际语义冲突——zoompan `d` 是 *per-input-frame* multiplier,loop input 7.5s × 30fps = 225 帧 → 40500 output frames per scene,tokyo plan 渲到 **1180s / 35K frames / 42MB**,正是 V0.2.0→V0.2.1 history 早警告过的 anti-pattern。
+
+**规则**:subagent 给 ffmpeg / 复杂 filter 链 / 系统行为类的 fix 推荐时,**实施前必须 single-step smoke verify root cause + fix mechanism**(30 秒 mock 跑一下),不能直接 full landing。
+
+**判断要点**:
+- ✅ subagent 给 ffmpeg flag / filter 改动 / library API 调用 → smoke verify 必须
+- ✅ subagent 给 single-file 文档 / config 改 → smoke verify 可选(改动 reversible 且小)
+- ✅ subagent 给跨 agent 接口设计 → smoke verify 必须(影响多个 repo)
+- ❌ subagent 给纯文本(README / commit message)→ 不需要 smoke
+
+这条跟 §6.1 (实测优先于推理 picture-gen 误判) 同源,但 surface 不同——§6.1 是"subagent 推理某 agent 有 bug,实测发现没有";§6.7 是"subagent 推理 root cause 对了,但推荐的 fix 实测发现破坏其他不变量"。
+
+### 6.6 SKILL.md 文档边界值 ≠ 实测安全上限(V0.4.2 起)
+
+**反例**:video-gen V0.2.x SKILL.md 写 `tail_hold_s` range `0.0-1.0`(default 0.3),tokyo-editor 用 1.0 触发 ffmpeg deadlock,video 卡 6s。实际只 default 0.3 被验证过,1.0 是 wishful spec。Plan agent 给我的 video plan 时按 0-1.0 范围设计,直接撞坑。同源 §6.4 (Pollinations 4 并发文档允许实际坏)——**文档允许 ≠ 实测安全**。
+
+**规则**:边界值用前必须**小样本测**(文档里默认值通常是经过验证的 sweet spot;range 上下限值得怀疑)。
+- 用文档默认值 → 可信
+- 用 range 上限/下限 → 必须 smoke 确认
+- 用 range 中间值 → 一般可信但有疑必验
+
+**适用场景**:ffmpeg filter 参数 / 外部 API rate limit / TTS voice list / model token cap / etc.
+
 ### 6.5 Optional agent 设计选择(V0.4.1 起)
 
 **反例**:V0.4.0 之前 script-gen 强依赖 `ANTHROPIC_API_KEY`,key 缺失就 `broken`,`bin/check-health.sh` overall 必 broken/degraded,首支 earwax 视频在这卡住一次。

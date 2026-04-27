@@ -1,5 +1,21 @@
 # director CHANGELOG
 
+## V0.4.2 — 2026-04-27
+
+**接入 video-gen V0.3.1 + 加 maintainer §6.6 §6.7 自警**(maintainer pass 第三波,reactive 触发自 tokyo-editor 视频 tail_hold deadlock)。
+
+接入:
+- **video-gen V0.3.1** (`af6443e`):tail_hold_s Field range 从 wishful `0.0-1.0` clamp 到实测安全 `0.0-0.3`。SKILL.md 同步。Plans with tail_hold>0.3 现在 pydantic 拒绝(strict failure 优于 silently broken 6s clip)。
+- `tool_versions.video-gen` 0.3.0 → 0.3.1(只 manifest 字段,代码无需改;pipeline.md video-gen 调用方式不变)。
+
+新增 maintainer.md 自警:
+- **§6.6 SKILL.md 文档边界值 ≠ 实测安全上限**:用 range 上下限前必须 smoke 验证。同源 §6.4 (Pollinations 文档 60req/min 实际单并发)。tokyo plan 用 tail_hold=1.0(SKILL.md 文档允许)直接撞坑。
+- **§6.7 Subagent 复杂行为推理实施前必须 single-step smoke verify**:特针对 ffmpeg / filter / 外部 API 类 fix 推荐。tokyo bug 时 Plan subagent root cause 对了(framequeue overflow),但推荐 fix `-loop 1 -t` 与 zoompan per-input-frame 语义冲突,landing 后 inflate 7×。同源 §6.1 (实测优先于推理) 但 surface 不同。
+
+CLAUDE.md 自警速查更新到 7 条(每次自动加载提醒主 Claude)。
+
+**反向追溯效应**:tokyo-editor manifest.json 的 `errors[]` 已正确记录 `tail_hold_attempted=1.0 / tail_hold_used=0.3 / recovered=true`——maintainer SOP §4 "failure budget" 流程在第二支视频跑通时自然触发,无人工介入。该 manifest 字段是反向追溯升级机会的金矿。
+
 ## V0.4.1 — 2026-04-27
 
 **零 API-key 路径** — 解决 "无 ANTHROPIC_API_KEY → script-gen broken → overall broken" 的 day-1 痛点(三方合议 D 方案落地)。
