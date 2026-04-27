@@ -11,6 +11,8 @@ director V0.4.1+:当 `bin/check-health.sh` 报 script-gen `optional=true / degra
 **hard rules**:
 - **不许 fabricate file paths** — `image_prompt` 是给 picture-gen 的文本,**不是**真实图片路径(那个由 picture-gen 出图后 director 重命名为 `scene_NN.jpg`)。
 - **不许调任何外部 API**(包括 Anthropic、Pollinations、本地模型)— 你就是 LLM。
+- **必须输出顶层 `style_anchor`(V0.4.5+)** — 一句 30-60 词的统一风格描述(画风 + 调色板 + 线稿 + 构图 + 背景),所有 scene 共用一条。director 调 picture-gen 时把它作为 `--style-anchor` 传入,自动 prepend 到每个 image_prompt 前,**保证 20 张图视觉一致**。例:`"flat 2D vector illustration, thick black outlines, soft pastel palette (peach/teal/cream), simple shapes, white background, modern children's storybook art, consistent character design"`。
+- **`image_prompt` 写细(V0.4.5+)** — 每条至少 3-4 句,涵盖:① 画面主体(角色 + 动作 + 道具)② 构图/取景(close-up / wide / overhead / 视角)③ 局部光线 + 情绪色温(暖色/冷色/中性)④ 关键细节(表情/手势/小物件)。不再写整体画风(那个由 `style_anchor` 统一锁定),专注**这一帧**的差异化内容。反例:`"a toothbrush hero"`(太短,Pollinations 自由发挥)。正例:`"close-up of a smiling cartoon boy in superhero costume, holding a giant glowing toothbrush above his head in victory pose, warm golden sparkles around him, three-quarter angle, joyful expression with rosy cheeks"`。
 - **每个 narration 长度对齐 voice 时长**:英文 ~150 wpm = 2.5 词/秒,中文 ~5 字/秒。 `duration_s` 至少 = `narration 朗读时长 + 0.3s buffer`,最大 ≤ 6s(video-gen V0.3 上限)。
 - **language 默认 en-US**(用户 2026-04-27 锁定:配音+字幕 一律英文,除非用户在本次请求里显式指定别的语言)。voice 默认 `en-US-JennyNeural`(warm),按 style 切 `en-US-AriaNeural` / `en-US-GuyNeural` / `en-US-EricNeural`。`narration` + `caption` 都用英文写,`caption` 上限 50 拉丁字符。
 - **scene 数 = 3-9**(video-gen V0.3 cap 是 10,留 1 个余量给 video-gen 内部 plan 调整)。
@@ -45,6 +47,7 @@ director V0.4.1+:当 `bin/check-health.sh` 报 script-gen `optional=true / degra
   "language": "zh-CN" | "en-US" | ...,
   "voice": "string — edge-tts voice id, 如 zh-CN-XiaoxiaoNeural / en-US-AriaNeural(按 voices.yaml 选)",
   "bgm_mood": "calm | tense | sad | happy | epic | mystery | funny | cozy",
+  "style_anchor": "string — 30-60 词,所有 scene 共用,prepend 到每个 image_prompt 前(V0.4.5+ 必填,锁跨场景视觉一致)",
   "source": "in-context-claude (director V0.4.1+)",
   "scenes": [
     {

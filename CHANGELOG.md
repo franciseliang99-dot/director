@@ -1,5 +1,28 @@
 # director CHANGELOG
 
+## V0.4.5 — 2026-04-27
+
+**接 picture-gen V0.3.0 `--style-anchor` + 改 in-context script schema**(reactive 触发自用户对 toothbrush-monsters 视频"图片质量不高"反馈)。
+
+诊断(主 Claude + Explore subagent + 视觉对比 scene_01/05/15):用户感觉"质量不高"的真因不是单图分辨率/锐度,是 **20 张之间风格不一致** —— 每条 image_prompt 自由写风格词,Pollinations 每次新解释,跨场景看像 20 个不同插画师(scene_01 textured / scene_05 gradient explosion / scene_15 minimal blob)。
+
+接入 + 修改:
+- **picture-gen V0.3.0** (`42071c4`):新增 `--style-anchor STR` CLI 参数,prepend 到 user prompt 前(早于 `--no-expand`)。
+- **CLAUDE.md CLI 模板** picture-gen 行加 `--style-anchor "<project_style_anchor>"` 槽位。
+- **prompts/script-system.md hard rules** 新增两条:
+  - **必须输出顶层 `style_anchor`** 字段(30-60 词,涵盖画风 + 调色板 + 线稿 + 构图 + 背景)。
+  - **`image_prompt` 写细**:每条 3-4 句,主体 + 构图 + 光线 + 细节;不再重复画风(由 style_anchor 统一)。
+- **schema 字段** script.json 新增顶层 `style_anchor: string`,V0.4.5+ 必填。
+- `tool_versions.picture-gen` 1 张视频出口处自动填到 `0.3.0`(下次新建 project 由 `bin/check-health.sh` 抓)。
+
+**为什么** — 比"上 flux-realism"或"加 enhance=true"ROI 都高:① 配置 + wrapper 改动,零 API 时延成本;② 直击主诉(一致性,不是锐度);③ 兼容 toothbrush 已有 cartoon 路径,不破坏现有视频风格。subagent 当时建议默认换 flux-realism,主 Claude 拒绝(那会毁掉 cartoon 风格,典型"对症不对因")—— 详见 conversation Step 4 复述。
+
+**回归测试**:
+- picture-gen `--version --json` exit 0(refactor 没破健康自检,§6.8 自警过关)。
+- production smoke:同 prompt + seed=205,加 anchor 后输出从"渐变爆炸 + 浓饱和"切到"白底 + 柔和粉彩 + 简洁角色",视觉锚定生效。
+
+**下一支视频起**(默认走 V0.4.4 en-US + V0.4.5 style_anchor)即受益,toothbrush 已交付的不回炉。
+
 ## V0.4.4 — 2026-04-27
 
 **默认语言锁定为 en-US**(用户 2026-04-27 在 toothbrush-monsters zh-CN 交付后明示:"以后视频配音和文字全部使用英文")。

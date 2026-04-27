@@ -14,7 +14,7 @@
 | 工具 | 命令 |
 |---|---|
 | script-gen | `cd /home/myclaw/script-gen && uv run python -m cli.main new "<desc>" --platform <tiktok\|douyin\|reels> --duration <N>` → session id 从 stderr `[script-gen] session id: <id>` 抓取 → `uv run python -m cli.main show <id>` 拿 JSON 到 stdout |
-| picture-gen | `python3 /home/myclaw/picture-gen/main.py "<prompt>" --width <W> --height <H> --no-expand --out <abs_dir>` (产物 `<dir>/<ts>-<slug>.jpg`,**director 必须重命名为 `scene_NN.jpg`**) |
+| picture-gen | `python3 /home/myclaw/picture-gen/main.py "<prompt>" --width <W> --height <H> --no-expand --style-anchor "<project_style_anchor>" --out <abs_dir>` (产物 `<dir>/<ts>-<slug>.jpg`,**director 必须重命名为 `scene_NN.jpg`**;`--style-anchor` 取 script.json 顶层 `style_anchor` 字段,所有 scene 共用一条,V0.4.5+ 强制) |
 | audio-gen | `/home/myclaw/audio-gen/.venv/bin/python3 /home/myclaw/audio-gen/generate.py "<text>" -v <voice> -o <abs.mp3>` |
 | bgm-gen | `/home/myclaw/bgm-gen/.venv/bin/python3 /home/myclaw/bgm-gen/generate.py "<topic 或 mood 描述>" -d <total_s+2> [-m <mood>] [--seed N] -o <abs.wav>` (本地 MIDI+fluidsynth,产物 .wav) |
 | video-gen | `Skill('video-gen', "<title prompt> --images abs1.jpg,abs2.jpg,... --aspect <16:9\|9:16> --out <abs.mp4>")` |
