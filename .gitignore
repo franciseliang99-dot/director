@@ -1,5 +1,16 @@
-# 产出物,不入仓
-projects/
+# 普通 projects 全忽略 (产物 + 用户视频)
+# (注:_smoke 是夹具,不被此规则 match,见下方细化)
+projects/[!_]*
+
+# _smoke 夹具:manifest + script.json 入仓,产物排
+projects/_smoke/images/
+projects/_smoke/audio/
+projects/_smoke/bgm/
+projects/_smoke/renders/
+projects/_smoke/logs/
+projects/_smoke/.raw/
+
+# 跨目录产物文件类型
 *.mp4
 *.mp3
 *.wav

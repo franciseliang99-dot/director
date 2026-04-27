@@ -1,0 +1,35 @@
+{
+  "title": "Smoke Test Three Scenes",
+  "platform": "tiktok",
+  "duration_sec": 10,
+  "language": "en-US",
+  "voice": "en-US-AriaNeural",
+  "bgm_mood": "calm",
+  "source": "manual smoke fixture (avoids burning ANTHROPIC_API_KEY on every regression run)",
+  "scenes": [
+    {
+      "idx": 1,
+      "duration_s": 3.5,
+      "caption": "smoke test scene one",
+      "narration": "First smoke test scene.",
+      "image_prompt": "Minimalist flat illustration of a green checkmark on cream background, vertical 9:16, simple geometric, pastel mint and cream",
+      "seed": 42
+    },
+    {
+      "idx": 2,
+      "duration_s": 3.5,
+      "caption": "smoke test scene two",
+      "narration": "Second scene now playing.",
+      "image_prompt": "Minimalist flat illustration of a yellow gear icon on cream background, vertical 9:16, simple geometric, pastel mint and cream",
+      "seed": 43
+    },
+    {
+      "idx": 3,
+      "duration_s": 3.0,
+      "caption": "smoke test done",
+      "narration": "Smoke test complete.",
+      "image_prompt": "Minimalist flat illustration of a blue arrow icon on cream background, vertical 9:16, simple geometric, pastel mint and cream",
+      "seed": 44
+    }
+  ]
+}

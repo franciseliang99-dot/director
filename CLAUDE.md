@@ -23,18 +23,26 @@
 
 **资产命名锁定**:images 落 `scene_NN.jpg`,audio 落 `scene_NN.mp3`(NN 两位补零)。video-gen 按 idx 配对,改名规则不能改。
 
-## 平台映射(已知缺口)
+## 平台映射(V0.4.0+,script-gen V0.2.0 已加 youtube)
 
-`script-gen` 的 `--platform` 只接受 `tiktok|douyin|reels`,**没有 `youtube`**。director 的平台映射:
+| director 平台 id | aspect | script-gen `--platform` | script-gen `--variant` |
+|---|---|---|---|
+| `tiktok` | 9:16 | `tiktok` | (n/a) |
+| `douyin` | 9:16 | `douyin` | (n/a) |
+| `yt_short` | 9:16 | `youtube` | `short`(强制,即便 duration ≤60s) |
+| `yt_landscape` | 16:9 | `youtube` | `long`(强制,长视频结构 / chapter / SEO title / thumbnail_text) |
 
-| director 平台 id | aspect | script-gen 传 |
-|---|---|---|
-| `tiktok` | 9:16 | `tiktok` |
-| `yt_short` | 9:16 | `reels` |
-| `yt_landscape` | 16:9 | `reels`(临时;长视频脚本风格仍待 script-gen 扩展) |
-| `douyin` | 9:16 | `douyin` |
+完整字段在 `platforms.yaml`。yt_landscape 长视频会输出新增字段 `chapters[{start_sec,title}] / seo_title / thumbnail_text` —— manifest 不存这些字段(它们在 `script/script.json` 里),但 step 4 后期上传 YouTube 时拿来填 metadata。
 
-`yt_landscape` 是已知短板:用 `reels` 当代偿,产出脚本风格偏短竖屏,合到 16:9 时画面会有上下黑边或裁切。等 script-gen 加 `youtube` 选项后改回。
+## Maintainer 职责(V0.4.0+)
+
+director 不只是"orchestrator",也是 5 agent + 自身的 **maintainer**。改 agent 代码或 director 配置前先 Read `maintainer.md`(SOP / 触发策略 / 谁拍板 / failure budget / smoke test 协议 / **自警清单**)。
+
+**自警清单关键项**(完整见 maintainer.md §6):
+1. 实测优先于推理 — 改 agent 源码前必须 reproducible failure
+2. 管道纪律 — `| tail` 吞 PIPESTATUS,用 `> log 2>&1` / `${PIPESTATUS[0]}` / `set -o pipefail`
+3. Edit-Read miss — Edit 失败要立刻 Read+重 Edit,git commit 前 `git diff --cached --stat` 验文件清单
+4. Pollinations 单并发 — picture-gen 全程串行,不信公开文档限流数字
 
 ## 健康自检(V0.3.0+)
 

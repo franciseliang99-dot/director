@@ -80,41 +80,42 @@ status=$?
 每个平台一次独立 `Skill('video-gen', ...)`:
 
 ```
-Skill('video-gen', "<title 来自 script.title> --images projects/<id>/images/scene_01.jpg,scene_02.jpg,... --aspect <16:9|9:16> --out projects/<id>/renders/<platform_id>.mp4")
+Skill('video-gen', "<title 来自 script.title> \
+  --images projects/<id>/images/scene_01.jpg,scene_02.jpg,... \
+  --narration projects/<id>/audio/scene_01.mp3,scene_02.mp3,... \
+  --aspect <16:9|9:16> \
+  --out projects/<id>/renders/<platform_id>.mp4")
 ```
 
-video-gen 内部 5 步(plan / render / ffprobe / 自评)由 skill 自管,主 Claude 不重复跑。
-**注意**:V0.2 video-gen **不接 narration 音频**,人声需要在 step 5 用 ffmpeg 后期合入。等 video-gen V0.3 出再改。
+V0.3.0+ video-gen 直接吃 `--narration` 一次性出带音轨 mp4(`h264 + aac 192k`)。**narration 数量必须 = scenes 数**,否则 video-gen 报错。video-gen 内部 5 步(plan / render / ffprobe / 自评)由 skill 自管,主 Claude 不重复跑。
 
-## Step 5 — 后期合音 + manifest 收尾
+**timing 约束**:每个 scene 的 `duration_s` ≥ 对应 narration 实际时长(ffprobe 取)+ ~0.2s buffer。video-gen 会按这个公式 plan,不需要主 Claude 干涉,但要把 audio 时长经 manifest 传过去(`steps.audio.scenes[i].duration_s` 字段)。
 
-合并多段 narration 为一条:
+## Step 5 — BGM amix + manifest 收尾
 
-```
-ffmpeg -f concat -safe 0 -i <(printf "file '%s'\n" audio/scene_*.mp3) -c copy audio/narration.mp3
-```
+V0.3.0+ video-gen 已经把 narration 合进 mp4 第二条流(aac 192k)。step 5 只剩 BGM 混入。
 
-合入视频:
-
-**有 BGM** (`steps.bgm.status=done`):narration 主轨 + BGM 衰减到 25% 副轨混音
+**有 BGM** (`steps.bgm.status=done`):BGM 衰减到 25% 跟现有 narration 轨 amix
 
 ```
 ffmpeg -i renders/<platform>.mp4 \
-       -i audio/narration.mp3 \
        -i bgm/track.wav \
-       -filter_complex "[1:a]volume=1.0[a1];[2:a]volume=0.25,afade=t=out:st=<video_total_s-1.5>:d=1.5[a2];[a1][a2]amix=inputs=2:duration=longest:dropout_transition=0[aout]" \
+       -filter_complex "[0:a]volume=1.0[a0];[1:a]volume=0.25,afade=t=out:st=<video_total_s-1.5>:d=1.5[a1];[a0][a1]amix=inputs=2:duration=longest:dropout_transition=0[aout]" \
        -map 0:v -map "[aout]" -c:v copy -c:a aac -b:a 192k -shortest renders/<platform>_av.mp4
 ```
 
-**关键**:`amix duration=longest`(不是 first)+ `-shortest` 让最终长度由 video 决定。若用 `first`(narration),narration 短于 video 时视频末段会被截掉。
+**关键**:`amix duration=longest` + `-shortest` 让最终长度由 video 决定。`-c:v copy` 不重编 video,只重编 audio。
 
-**无 BGM** (`steps.bgm.status=skipped/failed`):仅 narration
+**无 BGM** (`steps.bgm.status=skipped/failed`):**直接复用 video-gen 出片**,不跑 ffmpeg
 
 ```
-ffmpeg -i renders/<platform>.mp4 -i audio/narration.mp3 -c:v copy -c:a aac -shortest renders/<platform>_av.mp4
+cp renders/<platform>.mp4 renders/<platform>_av.mp4
+# 或者干脆 manifest.steps.video.<platform>.artifact 直接指向 <platform>.mp4 不做拷贝
 ```
 
-manifest `steps.video.<platform>.artifact` 改为 `_av.mp4`。所有关键 step (`status in {done, skipped}`) 后,manifest 新增 `completed_at`。
+manifest `steps.video.<platform>.artifact` 改为 `_av.mp4`(有 BGM)或保持 `<platform>.mp4`(无 BGM)。所有关键 step (`status in {done, skipped}`) 后,manifest 新增 `completed_at`。
+
+**对比 V0.3.0 之前(V0.2.x)**:那时 step 5 还要先 concat narration / 再三轨 ffmpeg amix(narration + bgm + video)。V0.3.0 把 narration 移进 video-gen 单 pass mux 后,step 5 只剩 BGM 一项,管道更短、长度更精确(直接走 video-gen plan 公式,不再有 V0.2.4 时观察到的 0.3s drift)。
 
 ## 降级矩阵
 

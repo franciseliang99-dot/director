@@ -1,0 +1,42 @@
+{
+  "project_id": "_smoke",
+  "topic": "smoke test fixture — 3 scene 10s tiktok",
+  "language": "en-US",
+  "style": "explain",
+  "platforms": [
+    {"id": "tiktok", "aspect": "9:16", "duration_target_s": 10}
+  ],
+  "created_at": "2026-04-27T08:00:00+08:00",
+  "completed_at": null,
+  "tool_versions": {
+    "script-gen": "0.2.0",
+    "picture-gen": "0.2.0",
+    "audio-gen": "1.0.2",
+    "bgm-gen": "1.0.2",
+    "video-gen": "0.3.0",
+    "director": "0.4.0"
+  },
+  "steps": {
+    "script": {
+      "status": "done",
+      "artifact": "script/script.json",
+      "reason": "manual smoke fixture (no script-gen call needed)"
+    },
+    "images": {"status": "pending", "scenes": [
+      {"idx": 1, "status": "pending"}, {"idx": 2, "status": "pending"}, {"idx": 3, "status": "pending"}
+    ]},
+    "audio":  {"status": "pending", "voice": "en-US-AriaNeural", "scenes": [
+      {"idx": 1, "status": "pending"}, {"idx": 2, "status": "pending"}, {"idx": 3, "status": "pending"}
+    ]},
+    "bgm":    {"status": "pending", "mood": "calm", "duration_s": 12, "seed": 42},
+    "video":  {"tiktok": {"status": "pending"}}
+  },
+  "errors": [],
+  "smoke_assertions": {
+    "video_duration_s_min": 9.0,
+    "video_duration_s_max": 13.0,
+    "video_audio_codec": "aac",
+    "video_resolution": "1080x1920",
+    "all_steps_status_in": ["done", "skipped"]
+  }
+}

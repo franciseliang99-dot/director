@@ -23,17 +23,18 @@ yt_short:
   aspect: "9:16"
   width: 1080
   height: 1920
-  duration_default_s: 30
+  duration_default_s: 45
   duration_max_s: 60
-  script_gen_platform: reels  # 临时映射,无原生 youtube 支持
+  script_gen_platform: youtube  # V0.2.0+: native youtube; auto-short-form (duration<=60s)
+  script_gen_variant: short     # explicit, in case duration tweaked >60 by mistake
   fps: 30
 
 yt_landscape:
   aspect: "16:9"
   width: 1920
   height: 1080
-  duration_default_s: 60
-  duration_max_s: 600
-  script_gen_platform: reels  # 已知短板,等 script-gen 加 youtube
+  duration_default_s: 480
+  duration_max_s: 1800
+  script_gen_platform: youtube  # V0.2.0+: native youtube; auto-long-form (duration>60s)
+  script_gen_variant: long      # explicit; chapter-structured, SEO title, thumbnail_text
   fps: 30
-  notes: "script-gen 暂无 youtube 长视频风格,产出仍是短竖屏节奏;后期裁切可能不理想"

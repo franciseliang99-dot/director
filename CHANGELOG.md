@@ -1,5 +1,34 @@
 # director CHANGELOG
 
+## V0.4.0 — 2026-04-27
+
+**Maintainer 协议沉淀 + 接入两个 agent V 升级**(三波 maintainer pass 收尾)。
+
+接入两个 agent 升级:
+- **video-gen V0.3.0** (`9565fb6`):narration 单 pass mux 合进 video。**pipeline.md step 4 加 `--narration scene_NN.mp3,...` 参数**;**step 5 删除 narration concat + 三轨 amix 段**,只剩 BGM 二轨 amix(narration 已在 video 第二条流);BGM 缺失时 step 5 直接 `cp <p>.mp4 <p>_av.mp4` 不跑 ffmpeg。**长度更精确**:V0.3 single-pass 严格按 `sum(d)+N*tail-(N-1)*xd` 公式(本次 9-scene 重渲 earwax = 44.20s,V0.2 两步合是 43.90s 漂 0.30s)。
+- **script-gen V0.2.0** (`b070d86`+`faa3b64`):youtube 平台 + 长视频独立 system prompt。**CLAUDE.md 平台映射段重写**:`yt_short → script_gen_platform=youtube --variant short`,`yt_landscape → script_gen_platform=youtube --variant long`(原"临时映射 reels"已知短板**消除**)。**platforms.yaml** yt_short / yt_landscape 改用 native youtube + 加 `script_gen_variant` 字段。
+
+新增:
+- **`maintainer.md`**(新文件,本 release 主交付):
+  - §1 触发策略(Reactive 默认 + Proactive 事件驱动 ≥5 P2+ backlog 或 2 支视频同因)
+  - §2 谁拍板 4 例外(单文件 fix 自决 / 接口设计提案 / 产品方向必问 / 跨层必问 / **成本红线 >2x 必问**)
+  - §3 5 步升级 SOP(director 占位 → agent 改测 bump → agent commit → smoke → director 同步 + commit)
+  - §4 Failure budget ≤2 + Rollback 触发(smoke 失败 / 同 agent 紧接出新错)
+  - §5 Smoke test 协议(锁 seed + 不锁 seed 双跑;断言 manifest + ffprobe + tool_versions 三方对齐)
+  - **§6 自警清单 4 条**(实测优先 / 管道纪律 / Edit-Read miss / Pollinations 单并发,**全部从本轮 maintainer pass 自身踩坑提炼**)
+  - §7 5 agent 接口契约表
+- **`projects/_smoke/`** smoke test 夹具(`manifest.json` + `script/script.json` 入仓,产物不入):3-scene 10s 9:16,固定 prompt + 锁 seed + 期望断言。
+- **`bin/run-smoke.sh`**:smoke runner,`--seeded` / `--random` 双跑模式,断言 duration ∈ [9,13]s + resolution 1080×1920 + audio codec aac + 5 agent --version 与 manifest.tool_versions 一致。
+- **`CLAUDE.md`**:加"Maintainer 职责"段引用 maintainer.md + 列自警清单 4 条简短版(每次自动加载就提醒主 Claude)。
+- **`.gitignore`**:加 `projects/_smoke/` 例外(夹具入仓,产物 images/audio/bgm/renders/logs 不入)。
+
+**剩余已知缺口**(对比 V0.3.0):
+- ~~script-gen 无 youtube~~ ✅ 解决(V0.2.0)
+- ~~video-gen V0.2 不接 narration~~ ✅ 解决(V0.3.0)
+- bgm-gen mood 关键词覆盖窄(8 mood + 中英关键词)— 留 V1.1 (低优,reactive 触发)
+
+**版本号 lockfile**(P3,留 V0.5)— `versions.lock` 钉 5 agent 版本组合,升级走两阶段。本 release 暂未实施,因为本轮 5 agent + director 一次升级到位,lockfile 收益要等下个 P2+ 升级波次才显著。
+
 ## V0.3.0 — 2026-04-27
 
 **Maintainer 协议第二波 — 统一健康自检接口落地**(对应 backlog #7,P0 杠杆投资)。
