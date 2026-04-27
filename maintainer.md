@@ -100,6 +100,23 @@ director 在 V0.3.0+ 不只是"orchestrator"(串视频),还是 5 个 agent (`scr
 
 **规则**:每次 Edit 失败(`InputValidationError: file not read`),**立刻 Read + 重 Edit + 进同一 commit**;不要假设 Edit 静默成功。git commit 前必看 `git diff --cached --stat` 确认文件清单符合预期。
 
+### 6.8 Import-decoupling refactor 必须 grep 全模块 use site(V0.4.3 起)
+
+**反例**:
+- picture-gen V0.2.0 加 `--version --json` 时把 `from picture_gen.agent import ...` 从模块顶层移除,但 `main()` 内还引用 → NameError(V0.2.1 修)
+- bgm-gen V1.0.2 把 `import pretty_midi` 顶层下沉到 `build_midi()`,但漏改 `_add_drums()` 也用 `pretty_midi.X` → NameError(V1.0.3 修,**同模式第 2 次复发**)
+
+**规则**:任何"为健康自检 / 性能 / 解耦"目的的 import refactor,**实施前 grep 整个模块**所有 use site,确保每个用 import name 的函数都自己 import 或共享一个 deferred-import helper。
+
+**Refactor checklist(每次跑)**:
+1. `grep -n "<module_name>\." <agent>/**/*.py` 找所有 dotted use(`pretty_midi.X` / `anthropic.X` / etc.)
+2. `grep -n "from <module_name>" <agent>/**/*.py` 找所有 from-import use
+3. 列出受影响函数清单,**每个函数都要么 ① 自己 import ② 接收依赖作参数 ③ 模块 top-level try-import + None-check**
+4. **production code path smoke test**(不只是 `--version --json`):跑一次真实命令(`generate.py "test"` / `main.py "test"`)验证 NameError 不复发
+5. agent commit 前 `git diff --cached --stat` 验文件清单完整(配合 §6.3 Edit-Read miss)
+
+**根本启示**:health-check refactor 的"诚意"是想 decouple 重依赖让 healthcheck 在 lib 缺失时仍能 report broken。但 decouple 不彻底会**比不 refactor 更糟**(silently break production)。要么彻底(全 module 改)要么不动,**不要半改**。
+
 ### 6.7 Subagent 复杂行为推理实施前必须 single-step smoke verify(V0.4.2 起)
 
 **反例**:video-gen V0.3.1 修 tail_hold_s deadlock 时,Plan subagent 给的 root cause 诊断**正确**(ffmpeg framequeue 在 tpad clone stage overflow),但推荐的 fix 方案 A(`-loop 1 -t` per png input,声称 zoompan `d=` 会 hard-cap output frame count)与 zoompan 实际语义冲突——zoompan `d` 是 *per-input-frame* multiplier,loop input 7.5s × 30fps = 225 帧 → 40500 output frames per scene,tokyo plan 渲到 **1180s / 35K frames / 42MB**,正是 V0.2.0→V0.2.1 history 早警告过的 anti-pattern。

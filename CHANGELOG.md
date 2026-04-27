@@ -1,5 +1,22 @@
 # director CHANGELOG
 
+## V0.4.3 — 2026-04-27
+
+**接入 bgm-gen V1.0.3 + 加 maintainer §6.8**(reactive 触发自 toothbrush-monsters 视频 bgm 失败)。
+
+接入:
+- **bgm-gen V1.0.3** (`347e4ae`):`_add_drums()` 漏 `import pretty_midi`(V1.0.2 健康自检 refactor 把顶层 import 下沉到 `build_midi()` 但漏 `_add_drums()`)。drum_kit ∈ {chase, pop, epic, shaker} 对应 mood {tense, happy, epic, funny} 全踩坑。toothbrush 项目用 funny mood 直接撞,bgm 输出 0 bytes。fix: `_add_drums()` 顶部加 import(同 build_midi pattern)。
+- `tool_versions.bgm-gen` 1.0.2 → 1.0.3。
+
+新增 maintainer.md 自警:
+- **§6.8 Import-decoupling refactor 必须 grep 全模块 use site**。两个反例:picture-gen V0.2.0→V0.2.1(agent.run / generator.generate_pollinations / planner.expand_prompt 三个 imports 移除时漏 main 引用)、bgm-gen V1.0.2→V1.0.3(pretty_midi 下沉到 build_midi 漏 _add_drums)。**同模式第 2 次复发**,所以入条。
+- 完整 refactor checklist 5 步:① `grep -n "<module_name>\." <agent>/**/*.py` ② `grep -n "from <module_name>"` ③ 列受影响函数清单 ④ **production code path smoke test**(不只 `--version --json`)⑤ commit 前 `git diff --cached --stat` 验文件清单(配合 §6.3 Edit-Read miss)
+- 根本启示:health-check refactor decouple 不彻底比不 refactor 更糟,**要么彻底要么不动,不要半改**。
+
+CLAUDE.md 自警速查到 8 条。
+
+**反向追溯**:本轮 maintainer §6.1 反例第 2 次复发,而且模式完全相同(import refactor 漏 grep)。这是 SOP 还没"长成"的信号——下次 picture-gen / audio-gen / video-gen 类似 refactor 必须先看 §6.8 checklist。
+
 ## V0.4.2 — 2026-04-27
 
 **接入 video-gen V0.3.1 + 加 maintainer §6.6 §6.7 自警**(maintainer pass 第三波,reactive 触发自 tokyo-editor 视频 tail_hold deadlock)。

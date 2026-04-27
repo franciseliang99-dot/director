@@ -46,6 +46,7 @@ director 不只是"orchestrator",也是 5 agent + 自身的 **maintainer**。改
 5. Optional agent 设计 — 标 `extra.optional=true` 前必须真有 fallback 路径,fallback 质量不显著低于本 agent
 6. SKILL.md 文档边界值 ≠ 实测安全上限 — 用 range 上下限前必须 smoke 验证(default 一般可信)
 7. Subagent 复杂行为推理实施前必须 single-step smoke verify — ffmpeg/filter/外部 API 类 fix 推荐尤其
+8. Import-decoupling refactor 必须 grep 全模块 use site — health-check 类改动每个用 import name 的函数都要自 import / 共享 deferred / top try-import;production smoke 不只 --version
 
 ## 健康自检(V0.3.0+)
 
