@@ -6,7 +6,8 @@
 
 输入:用户一句"主题",可选参数 (平台、时长、语言、风格)。
 
-1. 用户没指定时,默认 `platforms=[tiktok]`,`duration_s=30`,`language=zh-CN`,`style=vlog-warm`。
+1. 用户没指定时,默认 `platforms=[tiktok]`,`duration_s=30`,`language=en-US`,`style=vlog-warm`。
+   - **language 默认 en-US**(用户 2026-04-27 锁定:以后视频配音和文字一律英文,除非用户在本次请求里显式指定别的语言)。voice 默认走 `voices.yaml.en-US.warm = en-US-JennyNeural`(可按 style 改 en-US-AriaNeural / en-US-GuyNeural / en-US-EricNeural)。
 2. 生成 `project_id = <YYYYMMDD>-<slug-of-topic>`(slug 取主题前 24 字,非字母数字转 `-`,小写)。
 3. 建目录:`projects/<project_id>/{script,images,audio,bgm,renders,logs}/`。
 4. 写 `manifest.json`(按 schema,steps.* 全部 `pending`)。

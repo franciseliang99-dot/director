@@ -12,6 +12,7 @@ director V0.4.1+:当 `bin/check-health.sh` 报 script-gen `optional=true / degra
 - **不许 fabricate file paths** — `image_prompt` 是给 picture-gen 的文本,**不是**真实图片路径(那个由 picture-gen 出图后 director 重命名为 `scene_NN.jpg`)。
 - **不许调任何外部 API**(包括 Anthropic、Pollinations、本地模型)— 你就是 LLM。
 - **每个 narration 长度对齐 voice 时长**:英文 ~150 wpm = 2.5 词/秒,中文 ~5 字/秒。 `duration_s` 至少 = `narration 朗读时长 + 0.3s buffer`,最大 ≤ 6s(video-gen V0.3 上限)。
+- **language 默认 en-US**(用户 2026-04-27 锁定:配音+字幕 一律英文,除非用户在本次请求里显式指定别的语言)。voice 默认 `en-US-JennyNeural`(warm),按 style 切 `en-US-AriaNeural` / `en-US-GuyNeural` / `en-US-EricNeural`。`narration` + `caption` 都用英文写,`caption` 上限 50 拉丁字符。
 - **scene 数 = 3-9**(video-gen V0.3 cap 是 10,留 1 个余量给 video-gen 内部 plan 调整)。
 - **总视频时长**:`sum(duration_s) ≈ 用户给的目标 duration ± 5%`。
 

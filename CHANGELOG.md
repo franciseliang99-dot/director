@@ -1,5 +1,16 @@
 # director CHANGELOG
 
+## V0.4.4 — 2026-04-27
+
+**默认语言锁定为 en-US**(用户 2026-04-27 在 toothbrush-monsters zh-CN 交付后明示:"以后视频配音和文字全部使用英文")。
+
+- `pipeline.md` Step 0 默认 `language=zh-CN` → `language=en-US`,voice 默认走 `voices.yaml.en-US.warm = en-US-JennyNeural`(按 style 切 Aria/Guy/Eric)。
+- `prompts/script-system.md` 新增锁定行:`language="en-US"`,`narration` + `caption` 全英,`caption` 上限 50 拉丁字符。
+- 用户当次显式指定别的语言(中文/日文/粤语等)仍按当次走,但仅限本次,不改默认。
+- 历史交付 3 支视频语言混乱(earwax=en、tokyo=ja、toothbrush=zh-CN),从 V0.4.4 起统一锁默认。
+
+**为什么** — 用户明确偏好。memory `feedback_video_language_english_default.md` 同步落盘。
+
 ## V0.4.3 — 2026-04-27
 
 **接入 bgm-gen V1.0.3 + 加 maintainer §6.8**(reactive 触发自 toothbrush-monsters 视频 bgm 失败)。
