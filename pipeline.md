@@ -46,6 +46,27 @@ python3 /home/myclaw/picture-gen/main.py "<image_prompt>" --width <W> --height <
 - **bgm-gen 单跑**(fluidsynth CPU 密集)。
 - 推荐节奏:audio 1-9 分 3 批 (4+4+1) 一气呵成,BGM 同期或紧接,picture 全程串行(每张 ~1-3min);picture 串行链可放后台单 Bash 运行,与 audio/bgm 错峰。
 
+**管道纪律(2026-04-27 V0.2.2 实测教训)**:
+**禁止** `python3 <agent>/main.py ... 2>&1 | tail -N` 这种用法判断成功失败 —— shell pipe 默认 exit code = 最后命令(tail),会吞掉 agent 的真实退出码(实测 picture-gen 在 429 时正确返回 1,但 `| tail -3` 的 PIPESTATUS[0] 仍是 1 而 pipe 整体退 0,主 Claude 误判为成功)。
+
+**正确写法**(任选其一):
+```bash
+# 1. 重定向到日志文件,不用 pipe
+python3 <agent>/main.py ... > /path/to/log 2>&1
+status=$?
+
+# 2. 用 PIPESTATUS 显式取首位
+python3 <agent>/main.py ... 2>&1 | tail -3
+status=${PIPESTATUS[0]}
+
+# 3. 启用 pipefail
+set -o pipefail
+python3 <agent>/main.py ... 2>&1 | tail -3
+status=$?
+```
+
+**双重保险**:即便 exit code 对了,**还要看产物文件是否真存在 + 大小 > 0**(Pollinations 可能将来引入"软失败"返回 0 字节)。
+
 **重命名**:picture-gen 写到 `images/.raw/<ts>-<slug>.jpg`,主 Claude 跑完后立刻用 `mv` 重命名为 `images/scene_NN.jpg` 并删 `.raw/`。manifest `steps.images.scenes[i].artifact` 写**重命名后**的路径。
 
 ## Step 3 — 资产规范化检查
@@ -100,7 +121,7 @@ manifest `steps.video.<platform>.artifact` 改为 `_av.mp4`。所有关键 step 
 | 故障 | 处置 |
 |---|---|
 | script-gen Anthropic 超额 | 切 `--model claude-haiku-4-5-20251001`;或停下让用户手填 `script/script.json` 直接进 step 2 |
-| picture-gen pollinations 503/429 | **重试必须串行**(IP cooldown);picture-gen exit code 0 即使 429,要看 stderr / 产物文件;3 次失败 → 整体停,manifest `steps.images.partial=true` |
+| picture-gen pollinations 503/429 | **重试必须串行**(IP cooldown);picture-gen 已正确返回 exit 1,**前提是不要 `\| tail` 吞 PIPESTATUS**(见"管道纪律");3 次失败 → 整体停,manifest `steps.images.partial=true` |
 | audio-gen edge-tts 文本太长 | 按句号切多段调用,合并 mp3(文本 > 5000 字时主动拆分) |
 | audio-gen voice 不存在 | 退回默认 `zh-CN-XiaoxiaoNeural` 或 `en-US-JennyNeural` |
 | bgm-gen fluidsynth/SoundFont 缺 / mood 不存在 | manifest `steps.bgm.status=failed` → **自动降级 skipped**,step 5 走"无 BGM"分支 |

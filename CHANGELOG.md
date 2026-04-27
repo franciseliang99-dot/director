@@ -1,5 +1,18 @@
 # director CHANGELOG
 
+## V0.2.2 — 2026-04-27
+
+**纠错 + 管道纪律 + bgm-gen 元数据对齐**(maintainer pass 第一波,实测驱动)。
+
+V0.2.1 写"picture-gen exit-0-but-failed bug"是**误判**——mock `urllib.error.HTTPError(429)` 验证后,picture-gen `main.py:47-51` 的 `try/except Exception → return 1` 是健康的,真实 exit code 在 429 时确实是 1。问题在 director 端 `python3 <agent>/main.py ... 2>&1 | tail -3` 的 shell pipe **吞 PIPESTATUS** —— pipe exit = 最后命令(tail)= 0,picture-gen 的真实退出码被掩盖,主 Claude 当时误以为是 picture-gen 自身 bug。
+
+**变更**:
+- `pipeline.md` 新增"管道纪律"段(2026-04-27 V0.2.2 实测教训)— 禁止 `| tail` 吞 PIPESTATUS,给 3 种正确写法(`> log 2>&1` / `${PIPESTATUS[0]}` / `set -o pipefail`),双重保险:exit code + 产物文件存在/大小校验。
+- `pipeline.md` 降级矩阵 picture-gen 行 — "exit code 0 即使 429,要看 stderr"改为"已正确返回 exit 1,前提是不要 `| tail` 吞 PIPESTATUS"。
+- `bgm-gen` upstream commit `d31286e` 补登 V1.0.1 CHANGELOG(代码 `__version__` 早是 1.0.1,顶部条目漏更)— director maintainer 第一次通过"实跑 → manifest.tool_versions 不一致 → 反向推动 upstream 修元数据",证明 maintainer SOP 反馈环路有效。
+
+**没改 picture-gen**(P0 #1 取消):mock 验证后 picture-gen 行为正确,无需 bump。这次反例本身要写进 maintainer.md(等 SOP 沉淀):**实测验证根因优于 subagent 推理,改 agent 源码前必须 reproducible failure**。
+
 ## V0.2.1 — 2026-04-27
 
 首支视频实跑后的 SOP 修正(项目:`20260427-earwax-removal`,60s 英文 explain TikTok)。
