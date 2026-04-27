@@ -36,6 +36,24 @@
 
 `yt_landscape` 是已知短板:用 `reels` 当代偿,产出脚本风格偏短竖屏,合到 16:9 时画面会有上下黑边或裁切。等 script-gen 加 `youtube` 选项后改回。
 
+## 健康自检(V0.3.0+)
+
+每个 agent 都实现了 `--version --json` 健康自检接口(`name / version / healthy / ts / deps[] / env[] / checks[] / reasons[] / extra{severity}`,exit 0=ok / 1=degraded / 2=broken)。director 调用统一封装:
+
+```bash
+/home/myclaw/director/bin/check-health.sh
+# stdout: {"director_check_ts":"...", "overall":"ok|degraded|broken|missing-or-error", "agents":[...]}
+# exit:   0=ok / 1=degraded / 2=broken / 3=missing-or-error
+```
+
+**何时调**:
+- **每次开新 project** 调一次,把结果写入 `manifest.tool_health` + `manifest.tool_versions` 自动填(不再靠 grep 代码 / 手填字符串)
+- 用户说"看下健康 / 谁挂了"时单独跑
+
+**结果应用**:
+- `overall=broken` 而某 agent broken 是因 env(如 ANTHROPIC_API_KEY 未设)→ 走对应降级路径(降级矩阵已涵盖)
+- `overall=missing-or-error` → 停下问用户,可能是新机器 / 路径漂移 / 软链坏了
+
 ## bgm-gen mood 映射
 
 bgm-gen 的 `--mood` 是 8 选 1:`calm / tense / sad / happy / epic / mystery / funny / cozy`。director 按 manifest 的 `style` 字段映射(用户未指定 `style` 时,**让 bgm-gen 自己从 topic 关键词推断,不传 `-m`**):

@@ -1,5 +1,28 @@
 # director CHANGELOG
 
+## V0.3.0 — 2026-04-27
+
+**Maintainer 协议第二波 — 统一健康自检接口落地**(对应 backlog #7,P0 杠杆投资)。
+
+5 个 agent 全部加了 `--version --json` 健康自检接口(各自独立 commit + minor bump):
+
+| agent | from | to | new behavior |
+|---|---|---|---|
+| audio-gen | 1.0.1 | **1.0.2** | `--version --json` 探测 edge-tts;edge_tts import 下沉到函数内 |
+| picture-gen | 0.1.0 | **0.2.0** | 探测 urllib + anthropic(可选)+ ANTHROPIC_API_KEY env |
+| bgm-gen | 1.0.1 | **1.0.2** | 探测 pretty_midi + fluidsynth + FluidR3_GM.sf2;pretty_midi import 下沉 |
+| script-gen | 0.1.0 | **0.1.1** | 探测 anthropic + ANTHROPIC_API_KEY(critical);所有 heavy import 下沉到 cmd_* / main 内部 |
+| video-gen | 0.2.4 | **0.2.5** | 新文件 `scripts/health.py`(skill 不变);探测 ffmpeg + ffprobe + Pillow + pydantic + Noto CJK 字体 |
+
+director 端落地:
+- 新文件 `bin/check-health.sh` — 调 5 个 agent 收 JSON,合并成 `{director_check_ts, overall, agents[]}`,timeout 8s/agent;`overall ∈ {ok, degraded, broken, missing-or-error}`,exit 0/1/2/3 同语义。
+- `manifest.schema.json` 加 `tool_health` optional 字段(`checked_at / overall / agents[]`),不破已有 schema。
+- `CLAUDE.md` 加"健康自检"段:每开新 project 调一次自动填 manifest.tool_versions + tool_health;用户问"谁挂了"时单跑。
+
+**杠杆收益**:首次跑就发现 `script-gen broken` (`ANTHROPIC_API_KEY 未设`,与首支视频遭遇一致)— 从此 director 启动时秒发现这类 env 缺口,不需要等真跑 pipeline 时才挂。
+
+**实测脚踢**:写 check-health.sh 时自己又踩了一次"管道吞 exit code"(`./check-health.sh | jq` exit 0 而 direct 是 2)。V0.2.2 写过的"管道纪律"段第一次自我应用就被忽略——已加进 maintainer.md 的"自警清单"(等收尾 V0.4.0 时落)。
+
 ## V0.2.2 — 2026-04-27
 
 **纠错 + 管道纪律 + bgm-gen 元数据对齐**(maintainer pass 第一波,实测驱动)。

@@ -24,6 +24,15 @@
     "created_at":     {"type": "string", "format": "date-time"},
     "completed_at":   {"type": ["string", "null"], "format": "date-time"},
     "tool_versions":  {"type": "object", "additionalProperties": {"type": "string"}},
+    "tool_health":    {
+      "type": "object",
+      "description": "Snapshot from bin/check-health.sh at project init / resume. Optional but auto-filled when available.",
+      "properties": {
+        "checked_at":   {"type": "string", "format": "date-time"},
+        "overall":      {"enum": ["ok", "degraded", "broken", "missing-or-error"]},
+        "agents":       {"type": "array", "items": {"type": "object"}}
+      }
+    },
     "steps": {
       "type": "object",
       "required": ["script", "images", "audio", "bgm", "video"],
