@@ -43,6 +43,7 @@ director 不只是"orchestrator",也是 5 agent + 自身的 **maintainer**。改
 2. 管道纪律 — `| tail` 吞 PIPESTATUS,用 `> log 2>&1` / `${PIPESTATUS[0]}` / `set -o pipefail`
 3. Edit-Read miss — Edit 失败要立刻 Read+重 Edit,git commit 前 `git diff --cached --stat` 验文件清单
 4. Pollinations 单并发 — picture-gen 全程串行,不信公开文档限流数字
+5. Optional agent 设计 — 标 `extra.optional=true` 前必须真有 fallback 路径,fallback 质量不显著低于本 agent
 
 ## 健康自检(V0.3.0+)
 

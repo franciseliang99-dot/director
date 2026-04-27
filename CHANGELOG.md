@@ -1,5 +1,33 @@
 # director CHANGELOG
 
+## V0.4.1 — 2026-04-27
+
+**零 API-key 路径** — 解决 "无 ANTHROPIC_API_KEY → script-gen broken → overall broken" 的 day-1 痛点(三方合议 D 方案落地)。
+
+新增:
+- **`prompts/script-system.md`** — 主 Claude in-context 出 director-schema script.json 的 system prompt(直出 `idx / narration / image_prompt / seed`,跳过 script-gen 的"导演视角 schema → director 视角 schema"转换层)。含平台风格速查表 + TikTok 风险红线(品牌词/医疗算法降权词/NSFW 误判/FDA 警告项,从 earwax plan agent 提炼)。
+- **`pipeline.md` step 1 重写**:默认走 in-context (无需 key);可选 `--use-script-gen` 走原 CLI 路径(适用长对话迭代>3 轮 / SEO 矩阵 20+ 变体 / session 持久化)。降级流程:CLI 失败自动 fallback in-context,只在 in-context 也失败时停下问用户。
+- **`bin/check-health.sh` `optional` 豁免**:agent 自报 `extra.optional=true` 时,其 broken/degraded/error **不升级** overall(其他非 optional agent 的 worst 决定 overall)。本 release 只 script-gen 标 optional;其余 4 个仍 critical。
+- **`maintainer.md` §6.5 Optional agent 设计选择**:加第 5 条自警(标 optional 前必须真有 fallback / fallback 质量不显著低 / 何时回头去掉)。
+- **`CLAUDE.md` 自警清单速查** 加第 5 条简短版(每次自动加载提醒)。
+
+**配套 upstream**:script-gen V0.2.1 (commit `a7959e5`) 标 `extra.optional=true`,severity 仅 key 缺失时从 `broken` 降 `degraded`(SDK 缺仍 broken,无 env 能修)。
+
+**实测结果**:`bin/check-health.sh` 本 release 后输出:
+```
+overall: ok
+script-gen 0.2.1 degraded opt=true   ← 不计入 overall
+picture-gen 0.2.0 ok
+audio-gen 1.0.2 ok
+bgm-gen 1.0.2 ok
+video-gen 0.3.0 ok
+EXIT: 0
+```
+
+之前 V0.4.0 是 `overall=broken / EXIT=2`(script-gen ANTHROPIC_API_KEY 缺)。day-1 痛点消除。
+
+**为什么不上方案 E (script-gen backend switcher 加 Pollinations / ollama / template adapter)** — 500 行 + 4 backend 维护矩阵,而 D 方案 30 行解决 99% 痛点。如果 in-context 长期够用,E 永远不需要做(script-gen 退化为 session/show 的 archive 工具,这本来就是 hex 架构合理终态)。E 留 reactive 触发(in-context 真不够用时再做)。
+
 ## V0.4.0 — 2026-04-27
 
 **Maintainer 协议沉淀 + 接入两个 agent V 升级**(三波 maintainer pass 收尾)。

@@ -100,6 +100,19 @@ director 在 V0.3.0+ 不只是"orchestrator"(串视频),还是 5 个 agent (`scr
 
 **规则**:每次 Edit 失败(`InputValidationError: file not read`),**立刻 Read + 重 Edit + 进同一 commit**;不要假设 Edit 静默成功。git commit 前必看 `git diff --cached --stat` 确认文件清单符合预期。
 
+### 6.5 Optional agent 设计选择(V0.4.1 起)
+
+**反例**:V0.4.0 之前 script-gen 强依赖 `ANTHROPIC_API_KEY`,key 缺失就 `broken`,`bin/check-health.sh` overall 必 broken/degraded,首支 earwax 视频在这卡住一次。
+
+**规则**:agent 在 health JSON 里加 `extra.optional: true` 自我标记"可选 — 我挂了不阻塞 pipeline"。前提是 director 必须有 fallback 路径(script-gen 的 fallback 是 V0.4.1+ 的"主 Claude Read `prompts/script-system.md` in-context 出 script.json")。
+
+**判断要点**(下次想标 optional 时自问):
+- ① 有没有真正的 fallback?光标 optional 但没 fallback 是欺骗
+- ② fallback 质量是不是不显著低于本 agent?显著低则不能标(silently 降质)
+- ③ 标 optional **不等于** 删 agent。何时仍需要原 agent?要写进 CHANGELOG(script-gen V0.2.1 写了:长对话迭代 / SEO 矩阵 / 离线场景)
+
+**何时回头去掉 optional**:fallback 路径长期不够用(reactive 触发) 或 该 agent 升级到与 fallback 不可替代的程度。
+
 ### 6.4 Pollinations 单并发(V0.2.1 起)
 
 **反例**:首支视频 4 并发 picture-gen 触发 429,IP 进入 ~3min cooldown。subagent 估"60 req/min 阈值"过乐观,**不可信**。

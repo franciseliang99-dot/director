@@ -71,11 +71,16 @@ for spec in "${AGENTS[@]}"; do
     continue
   fi
 
+  # V0.4.1: agent can mark itself optional via extra.optional=true. Optional agent's
+  # broken/degraded/error does NOT escalate the overall status (it stays at the worst
+  # of NON-optional agents). The agent's own status is still reported faithfully.
+  is_optional=$(echo "$out" | jq -r '.extra.optional // false')
+
   case $code in
     0) status="ok"       ;;
-    1) status="degraded" ; worst_set "degraded" "$code" ;;
-    2) status="broken"   ; worst_set "broken"   "$code" ;;
-    *) status="error"    ; worst_set "missing-or-error" "$code" ;;
+    1) status="degraded" ; [ "$is_optional" != "true" ] && worst_set "degraded" "$code" ;;
+    2) status="broken"   ; [ "$is_optional" != "true" ] && worst_set "broken"   "$code" ;;
+    *) status="error"    ; [ "$is_optional" != "true" ] && worst_set "missing-or-error" "$code" ;;
   esac
   results+=$(echo "$out" | jq --arg s "$status" --argjson c "$code" '. + {status:$s, exit_code:$c}')
 done

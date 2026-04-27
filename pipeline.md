@@ -11,18 +11,28 @@
 3. 建目录:`projects/<project_id>/{script,images,audio,bgm,renders,logs}/`。
 4. 写 `manifest.json`(按 schema,steps.* 全部 `pending`)。
 
-## Step 1 — script-gen(串行)
+## Step 1 — 出 script.json(默认 in-context,V0.4.1+)
 
-```
+**优先路径(in-context,无需 ANTHROPIC_API_KEY)**:主 Claude 自己 Read `prompts/script-system.md` + 用户给的视频参数,**直接 Write `projects/<id>/script/script.json`**(director-schema:`idx / narration / image_prompt / seed`)。
+
+理由:① 主 Claude 本身就是 LLM,质量 = script-gen 基线;② 直出 director 消费的 schema,省 script-gen "导演视角 → director 视角"转换层;③ 零依赖外部 key。
+
+manifest:`steps.script.status=done / artifact=script/script.json / source=in-context-claude`。
+
+**可选路径(用 script-gen CLI)**:用户显式 `--use-script-gen` 时启用,适用场景:① 长对话迭代打磨(>3 轮反馈) ② SEO 关键词矩阵研究(20+ 变体批量) ③ 用户已设 `ANTHROPIC_API_KEY` 想要 session 持久化。
+
+```bash
 cd /home/myclaw/script-gen
-uv run python -m cli.main new "<topic>" --platform <mapped> --duration <N> 2>logs/script.err 1>logs/script.stream
+uv run python -m cli.main new "<topic>" --platform <mapped> --variant <auto|short|long> --duration <N> \
+  2>logs/script.err 1>logs/script.stream
 session_id=$(grep "session id" logs/script.err | awk '{print $NF}')
-uv run python -m cli.main show "$session_id" > projects/<id>/script/script.json
+uv run python -m cli.main show "$session_id" > projects/<id>/script/script.raw.json
+# 然后跑一个 raw → director-schema 的转换(写主 Claude 当时手活,或 helper 脚本待加 V0.5)
 ```
 
-- manifest `steps.script.session_id = $session_id`,后续改稿走 `resume` 复用 prompt cache。
-- 解析 `script.json` 的 `scenes[]`(假设 schema 含 `idx / narration / image_prompt`),决定 N。
-- 解析失败 → manifest `steps.script.status=failed`,停下问用户(可能是 script-gen schema 漂移)。
+manifest:`steps.script.session_id = $session_id` 留着,后续改稿走 `resume` 复用 prompt cache。
+
+**降级流程**:走 in-context 时 script-gen 健康自检 `optional=true / degraded` 不阻塞 `bin/check-health.sh` overall。走 CLI 时若失败(API 超额 / SDK 缺)→ 自动 fallback 到 in-context,不停下问用户(只在 in-context 也失败时停)。
 
 ## Step 2 — 并行出 N 张图 + N 段音频 + 1 条 BGM
 
